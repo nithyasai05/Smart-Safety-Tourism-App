@@ -1,0 +1,911 @@
+/* Tourist Dashboard Styles - Sky Blue & White Glassmorphism Design */
+
+/* Root Container - Sky Blue Gradient Background */
+.tourist-dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #87ceeb 0%, #e0f7ff 50%, #ffffff 100%);
+  position: relative;
+  overflow-x: hidden;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
+}
+
+/* Animated Background Overlay */
+.tourist-dashboard::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(
+      circle at 20% 30%,
+      rgba(135, 206, 235, 0.15) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 70%,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(135, 206, 235, 0.08) 0%,
+      transparent 60%
+    );
+  pointer-events: none;
+  z-index: 0;
+  animation: backgroundShift 15s ease-in-out infinite;
+}
+
+@keyframes backgroundShift {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* App Bar - Sky Blue Glass */
+.tourist-appbar {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(135, 206, 235, 0.3) !important;
+  box-shadow: 0 4px 24px rgba(135, 206, 235, 0.15) !important;
+  color: #0369a1 !important;
+}
+
+/* Main Content Container - Reduced Padding */
+.tourist-content {
+  padding: 6px;
+  padding-top: 72px; /* Account for fixed AppBar height */
+  max-width: 100%;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 360px) {
+  .tourist-content {
+    padding: 8px;
+    padding-top: 72px;
+    max-width: 480px;
+  }
+}
+
+@media (min-width: 600px) {
+  .tourist-content {
+    padding: 10px;
+    padding-top: 80px;
+    max-width: 580px;
+  }
+}
+
+@media (min-width: 768px) {
+  .tourist-content {
+    padding: 12px;
+    padding-top: 80px;
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 960px) {
+  .tourist-content {
+    padding: 14px;
+    padding-top: 80px;
+    max-width: 900px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .tourist-content {
+    padding: 16px;
+    padding-top: 80px;
+    max-width: 1140px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .tourist-content {
+    padding: 18px;
+    padding-top: 80px;
+    max-width: 1400px;
+  }
+}
+
+/* Premium Glass Card Styles - Sky Blue & White */
+.welcome-card,
+.map-card,
+.status-card,
+.contact-card,
+.activity-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(135, 206, 235, 0.35) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 8px 32px rgba(135, 206, 235, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+  margin-bottom: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #0c4a6e !important;
+}
+
+.welcome-card:hover,
+.map-card:hover,
+.status-card:hover,
+.contact-card:hover,
+.activity-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 36px rgba(135, 206, 235, 0.3),
+    inset 0 1px 3px rgba(255, 255, 255, 0.7);
+  border-color: rgba(135, 206, 235, 0.5);
+}
+
+/* Welcome Card - Gradient Sky Blue */
+.welcome-card {
+  background: linear-gradient(
+    135deg,
+    rgba(135, 206, 235, 0.85),
+    rgba(255, 255, 255, 0.9)
+  ) !important;
+  border: 1px solid rgba(135, 206, 235, 0.4) !important;
+  box-shadow: 0 8px 28px rgba(135, 206, 235, 0.25) !important;
+}
+
+@media (min-width: 600px) {
+  .welcome-card {
+    margin-bottom: 14px;
+  }
+}
+
+/* Map Card - Pure White Glass */
+.map-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.8),
+    rgba(240, 249, 255, 0.85)
+  ) !important;
+  border: 1px solid rgba(135, 206, 235, 0.3) !important;
+}
+
+.map-container {
+  border-radius: 12px !important;
+  border: 1px solid rgba(135, 206, 235, 0.25) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  overflow: hidden;
+}
+
+.map-container iframe {
+  display: block;
+  border-radius: 12px !important;
+}
+
+/* Status Grid - Responsive Layout */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+@media (min-width: 360px) {
+  .status-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (min-width: 600px) {
+  .status-grid {
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+}
+
+@media (min-width: 960px) {
+  .status-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+  }
+}
+
+/* Status Card - Sky Blue Glass */
+.status-card {
+  background: rgba(255, 255, 255, 0.65) !important;
+  border: 1px solid rgba(135, 206, 235, 0.35) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 8px !important;
+}
+
+.status-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  background: rgba(255, 255, 255, 0.85) !important;
+  box-shadow:
+    0 6px 20px rgba(135, 206, 235, 0.25),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  border-color: rgba(135, 206, 235, 0.5);
+}
+
+/* Contact Card - White with Sky Blue Accent */
+.contact-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(224, 247, 255, 0.85)
+  ) !important;
+  border: 1px solid rgba(135, 206, 235, 0.4) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.contact-card::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(
+    circle,
+    rgba(135, 206, 235, 0.25) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+}
+
+.contact-card::after {
+  content: "";
+  position: absolute;
+  bottom: -30px;
+  left: -30px;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.3) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+}
+
+/* Activity Card - White Glass */
+.activity-card {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(135, 206, 235, 0.3) !important;
+  margin-bottom: 80px;
+}
+
+.activity-item {
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(135, 206, 235, 0.25) !important;
+  border-radius: 12px !important;
+  border-left: 3px solid rgba(135, 206, 235, 0.6) !important;
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
+  padding: 8px !important;
+}
+
+.activity-item:hover {
+  background: rgba(255, 255, 255, 0.85) !important;
+  transform: translateX(6px);
+  box-shadow: 0 4px 16px rgba(135, 206, 235, 0.2);
+}
+
+.activity-item.active {
+  border-left-color: #dc2626 !important;
+  background: linear-gradient(
+    90deg,
+    rgba(220, 38, 38, 0.15),
+    rgba(255, 255, 255, 0.7)
+  ) !important;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.2);
+}
+
+.activity-item.resolved {
+  border-left-color: #0ea5e9 !important;
+  background: linear-gradient(
+    90deg,
+    rgba(14, 165, 233, 0.15),
+    rgba(255, 255, 255, 0.7)
+  ) !important;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.15);
+}
+
+.activity-item.cancelled {
+  border-left-color: #94a3b8 !important;
+  opacity: 0.6;
+  background: rgba(148, 163, 184, 0.1) !important;
+}
+
+/* Panic Button - Sky Blue Gradient */
+.panic-fab {
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important;
+  box-shadow:
+    0 8px 28px rgba(14, 165, 233, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  animation: pulse-shadow-blue 2s infinite;
+  color: white !important;
+}
+
+.panic-fab.active {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+  animation: panic-pulse-red 0.5s infinite;
+  box-shadow:
+    0 8px 32px rgba(220, 38, 38, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
+}
+
+.panic-fab:hover {
+  transform: translateX(-50%) scale(1.08);
+  box-shadow:
+    0 12px 36px rgba(14, 165, 233, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.6);
+}
+
+.panic-label {
+  z-index: 999;
+  text-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+  color: #0284c7 !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.2px !important;
+  font-size: 0.7rem !important;
+}
+
+@keyframes pulse-shadow-blue {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 28px rgba(14, 165, 233, 0.4),
+      inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 12px 36px rgba(14, 165, 233, 0.6),
+      inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes panic-pulse-red {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.12);
+  }
+}
+
+/* Extra Small Screens (< 360px) */
+@media (max-width: 359px) {
+  .tourist-content {
+    padding: 4px;
+  }
+
+  .welcome-card,
+  .map-card,
+  .contact-card,
+  .activity-card {
+    border-radius: 12px !important;
+    margin-bottom: 8px;
+  }
+
+  .status-card {
+    border-radius: 10px !important;
+    padding: 6px !important;
+  }
+
+  .map-container {
+    border-radius: 8px !important;
+  }
+}
+
+/* Safe Area for Notch Devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .tourist-appbar {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .panic-fab {
+    bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .panic-label {
+    bottom: calc(0px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Drawer Styles - Sky Blue Glass */
+.MuiDrawer-paper {
+  max-width: 85vw;
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  border-left: 1px solid rgba(135, 206, 235, 0.3) !important;
+}
+
+/* Smooth Scroll */
+.tourist-content {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Loading Animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.loading-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(135, 206, 235, 0.1) 0px,
+    rgba(255, 255, 255, 0.3) 40px,
+    rgba(135, 206, 235, 0.1) 80px
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Map Hover Effect */
+.map-container:hover {
+  border-color: rgba(135, 206, 235, 0.6);
+  box-shadow: 0 4px 16px rgba(135, 206, 235, 0.2);
+}
+
+/* Responsive Typography */
+@media (max-width: 359px) {
+  .MuiTypography-h6 {
+    font-size: 0.9rem !important;
+  }
+
+  .MuiTypography-subtitle1 {
+    font-size: 0.8rem !important;
+  }
+
+  .MuiTypography-subtitle2 {
+    font-size: 0.75rem !important;
+  }
+
+  .MuiTypography-body2 {
+    font-size: 0.7rem !important;
+  }
+
+  .MuiTypography-caption {
+    font-size: 0.6rem !important;
+  }
+}
+
+@media (min-width: 360px) and (max-width: 599px) {
+  .MuiTypography-h6 {
+    font-size: 0.95rem !important;
+  }
+
+  .MuiTypography-subtitle1 {
+    font-size: 0.85rem !important;
+  }
+
+  .MuiTypography-body2 {
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (min-width: 600px) {
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
+
+  .MuiTypography-subtitle1 {
+    font-size: 0.95rem !important;
+  }
+}
+
+@media (min-width: 960px) {
+  .MuiTypography-h6 {
+    font-size: 1.25rem !important;
+  }
+
+  .MuiTypography-subtitle1 {
+    font-size: 1rem !important;
+  }
+}
+
+/* Button Responsive - Reduced Padding */
+.MuiButton-root {
+  font-size: 0.75rem !important;
+  padding: 5px 10px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(135, 206, 235, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.MuiButton-root:hover {
+  background: rgba(135, 206, 235, 0.3) !important;
+  border-color: rgba(135, 206, 235, 0.5) !important;
+  transform: scale(1.03);
+}
+
+@media (min-width: 600px) {
+  .MuiButton-root {
+    font-size: 0.85rem !important;
+    padding: 6px 14px !important;
+  }
+}
+
+@media (min-width: 960px) {
+  .MuiButton-root {
+    font-size: 0.9rem !important;
+    padding: 8px 16px !important;
+  }
+}
+
+.MuiButton-startIcon {
+  margin-right: 4px !important;
+}
+
+.MuiButton-startIcon svg {
+  font-size: 16px !important;
+}
+
+@media (min-width: 600px) {
+  .MuiButton-startIcon svg {
+    font-size: 18px !important;
+  }
+}
+
+/* Chip Responsive */
+.MuiChip-root {
+  height: 22px !important;
+  font-size: 0.65rem !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(135, 206, 235, 0.3) !important;
+}
+
+@media (min-width: 600px) {
+  .MuiChip-root {
+    height: 24px !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+.MuiChip-icon {
+  font-size: 12px !important;
+}
+
+/* Touch-Friendly Styles */
+@media (pointer: coarse) {
+  .panic-fab {
+    width: 68px !important;
+    height: 68px !important;
+  }
+
+  .MuiButton-root {
+    min-height: 44px;
+  }
+
+  .MuiIconButton-root {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .tourist-appbar {
+    background: #87ceeb !important;
+    border-bottom: 2px solid #0369a1 !important;
+  }
+
+  .status-card,
+  .welcome-card,
+  .contact-card,
+  .activity-card {
+    border: 2px solid #0369a1 !important;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .panic-fab,
+  .status-card,
+  .activity-item,
+  .tourist-dashboard::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .panic-fab,
+  .panic-label,
+  .tourist-appbar {
+    display: none !important;
+  }
+
+  .tourist-content {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .welcome-card,
+  .map-card,
+  .status-card,
+  .contact-card,
+  .activity-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+}
+
+/* Card Content Padding Override - Reduced */
+.MuiCardContent-root {
+  padding: 10px !important;
+}
+
+@media (min-width: 600px) {
+  .MuiCardContent-root {
+    padding: 12px !important;
+  }
+}
+
+@media (min-width: 960px) {
+  .MuiCardContent-root {
+    padding: 14px !important;
+  }
+}
+
+.MuiCardContent-root:last-child {
+  padding-bottom: 10px !important;
+}
+
+@media (min-width: 600px) {
+  .MuiCardContent-root:last-child {
+    padding-bottom: 12px !important;
+  }
+}
+
+/* Avatar Styles - Sky Blue Border */
+.MuiAvatar-root {
+  border: 2px solid rgba(135, 206, 235, 0.5) !important;
+  box-shadow: 0 4px 12px rgba(135, 206, 235, 0.25) !important;
+}
+
+/* Icon Styles - Sky Blue Theme */
+.MuiSvgIcon-root {
+  color: #0284c7 !important;
+}
+
+/* Alert Styles - Glass Effect */
+.MuiAlert-root {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(135, 206, 235, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(135, 206, 235, 0.15) !important;
+}
+
+/* Dialog Styles - Sky Blue Glass */
+.MuiDialog-paper {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(135, 206, 235, 0.3) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 16px 48px rgba(135, 206, 235, 0.25) !important;
+}
+
+/* Menu Styles - White Glass */
+.MuiMenu-paper {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(135, 206, 235, 0.25) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(135, 206, 235, 0.2) !important;
+}
+
+.MuiMenuItem-root:hover {
+  background: rgba(135, 206, 235, 0.15) !important;
+}
+
+/* Progress Indicators - Sky Blue */
+.MuiCircularProgress-root {
+  color: #0ea5e9 !important;
+}
+
+.MuiLinearProgress-root {
+  background: rgba(135, 206, 235, 0.2) !important;
+  border-radius: 8px !important;
+}
+
+.MuiLinearProgress-bar {
+  background: linear-gradient(90deg, #0ea5e9, #38bdf8) !important;
+  border-radius: 8px !important;
+}
+
+/* Badge Styles */
+.MuiBadge-badge {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* List Item Styles - Glass Effect */
+.MuiListItemButton-root {
+  border-radius: 10px !important;
+  margin: 4px 8px !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(135, 206, 235, 0.2) !important;
+}
+
+.MuiListItemButton-root:hover {
+  background: rgba(135, 206, 235, 0.25) !important;
+  transform: translateX(4px);
+}
+
+/* Divider - Sky Blue */
+.MuiDivider-root {
+  background: rgba(135, 206, 235, 0.3) !important;
+  margin: 8px 0 !important;
+}
+
+/* Switch Styles - Sky Blue */
+.MuiSwitch-switchBase.Mui-checked {
+  color: #0ea5e9 !important;
+}
+
+.MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
+  background-color: #38bdf8 !important;
+}
+
+/* Toolbar - Reduced Padding */
+.MuiToolbar-root {
+  padding: 4px 8px !important;
+  min-height: 56px !important;
+}
+
+@media (min-width: 600px) {
+  .MuiToolbar-root {
+    padding: 6px 12px !important;
+    min-height: 60px !important;
+  }
+}
+
+@media (min-width: 960px) {
+  .MuiToolbar-root {
+    padding: 8px 16px !important;
+    min-height: 64px !important;
+  }
+}
+
+/* Landscape Mode - Optimize Space */
+@media (orientation: landscape) and (max-height: 500px) {
+  .tourist-content {
+    padding: 6px;
+  }
+
+  .welcome-card,
+  .map-card,
+  .status-card,
+  .contact-card,
+  .activity-card {
+    margin-bottom: 8px;
+  }
+
+  .panic-fab {
+    width: 56px !important;
+    height: 56px !important;
+  }
+}
+
+/* Ultra-Wide Screens */
+@media (min-width: 1920px) {
+  .tourist-content {
+    max-width: 1600px;
+    padding: 20px;
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+  }
+}
+
+/* Tablet Portrait */
+@media (min-width: 600px) and (max-width: 959px) and (orientation: portrait) {
+  .status-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Tablet Landscape */
+@media (min-width: 600px) and (max-width: 959px) and (orientation: landscape) {
+  .status-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Small Mobile Optimization */
+@media (max-width: 359px) {
+  .status-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+}
+
+/* Accessibility - Focus States */
+.MuiButton-root:focus-visible,
+.MuiIconButton-root:focus-visible {
+  outline: 2px solid #0ea5e9 !important;
+  outline-offset: 2px !important;
+}
+
+/* Glass Card Hover Enhancement */
+.welcome-card:hover,
+.map-card:hover,
+.contact-card:hover,
+.activity-card:hover {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Status Chip Colors - Sky Blue Variants */
+.status-chip-safe {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.2),
+    rgba(255, 255, 255, 0.7)
+  ) !important;
+  color: #059669 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.status-chip-warning {
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.2),
+    rgba(255, 255, 255, 0.7)
+  ) !important;
+  color: #d97706 !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.status-chip-danger {
+  background: linear-gradient(
+    135deg,
+    rgba(220, 38, 38, 0.2),
+    rgba(255, 255, 255, 0.7)
+  ) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(220, 38, 38, 0.3) !important;
+}
+
+/* Icon Button Glass Effect */
+.MuiIconButton-root {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(135, 206, 235, 0.2) !important;
+}
+
+.MuiIconButton-root:hover {
+  background: rgba(135, 206, 235, 0.3) !important;
+  border-color: rgba(135, 206, 235, 0.4) !important;
+}

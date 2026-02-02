@@ -1,0 +1,318 @@
+/* App Container */
+.App {
+  text-align: center;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Responsive Card Styles */
+.card-container {
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.card-container:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Stats Cards */
+.stats-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 16px !important;
+  padding: 24px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 24px rgba(102, 126, 234, 0.4);
+}
+
+.stats-card-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 12px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.stats-card-label {
+  font-size: 0.95rem;
+  opacity: 0.95;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Responsive Table Styles */
+.responsive-table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table table {
+  min-width: 650px;
+}
+
+/* Mobile-optimized table */
+@media (max-width: 768px) {
+  .responsive-table table {
+    min-width: 100%;
+  }
+
+  .responsive-table th,
+  .responsive-table td {
+    padding: 8px 4px;
+    font-size: 0.85rem;
+  }
+
+  .MuiTableCell-root {
+    padding: 8px 4px !important;
+  }
+}
+
+/* Button Enhancements */
+.action-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  padding: 10px 24px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
+}
+
+.action-button:active {
+  transform: translateY(0);
+}
+
+/* Paper/Card Enhancements */
+.enhanced-paper {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.enhanced-paper:hover {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* AppBar Styling */
+.app-bar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Chip Enhancements */
+.status-chip {
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 4px 8px !important;
+}
+
+.status-chip-active {
+  background-color: #10b981 !important;
+  color: white !important;
+}
+
+.status-chip-resolved {
+  background-color: #6b7280 !important;
+  color: white !important;
+}
+
+.status-chip-pending {
+  background-color: #f59e0b !important;
+  color: white !important;
+}
+
+/* Map Container */
+.map-container {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  margin: 16px 0;
+}
+
+/* Loading States */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading-text {
+  color: #667eea;
+  font-weight: 600;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive Grid */
+.responsive-grid {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+}
+
+@media (min-width: 1200px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 599px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 16px;
+  }
+}
+
+/* Responsive Padding */
+@media (max-width: 768px) {
+  .MuiContainer-root {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .MuiBox-root {
+    padding: 16px !important;
+  }
+
+  .stats-card-value {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-card-value {
+    font-size: 1.75rem;
+  }
+
+  .stats-card-label {
+    font-size: 0.85rem;
+  }
+
+  h4,
+  .MuiTypography-h4 {
+    font-size: 1.5rem !important;
+  }
+
+  h5,
+  .MuiTypography-h5 {
+    font-size: 1.25rem !important;
+  }
+
+  h6,
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* Alert Enhancements */
+.alert-card {
+  border-left: 4px solid;
+  border-radius: 8px !important;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+.alert-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.alert-card-critical {
+  border-left-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.alert-card-warning {
+  border-left-color: #f59e0b !important;
+  background-color: #fffbeb !important;
+}
+
+.alert-card-info {
+  border-left-color: #3b82f6 !important;
+  background-color: #eff6ff !important;
+}
+
+/* Dialog Enhancements */
+.MuiDialog-paper {
+  border-radius: 16px !important;
+  padding: 8px !important;
+}
+
+/* Input Field Enhancements */
+.MuiTextField-root {
+  margin: 8px 0 !important;
+}
+
+.MuiOutlinedInput-root {
+  border-radius: 12px !important;
+}
+
+.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #667eea !important;
+}
+
+.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #764ba2 !important;
+  border-width: 2px !important;
+}
+
+/* Avatar Enhancements */
+.user-avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Smooth Transitions */
+* {
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* Print Styles */
+@media print {
+  .app-bar,
+  .action-button,
+  .MuiDrawer-root {
+    display: none !important;
+  }
+
+  .enhanced-paper {
+    box-shadow: none !important;
+  }
+}

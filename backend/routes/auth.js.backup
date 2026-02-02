@@ -1,0 +1,1249 @@
+const express = require("express");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const { body, validationResult } = require("express-validator");
+const User = require("../models/User");
+const memoryStore = require("../utils/memoryStore");
+const { auth } = require("../middleware/auth");
+const blockchainService = require("../services/blockchainService");
+
+const router = express.Router();
+
+// JWT Secret (in production, use environment variable)
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
+
+// Check if we should use in-memory store (when MongoDB is not available)
+let useMemoryStore = false;
+
+// Generate JWT Token
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
+};
+
+// Normalize phone numbers to E.164. Default country code +91 when missing.
+function normalizePhone(phone) {
+  if (!phone) return phone;
+  let p = String(phone).trim();
+  // remove common separators
+  p = p.replace(/[^0-9+]/g, "");
+  if (p.startsWith("+")) return p;
+  // if 10 digits, assume Indian number
+  if (/^\d{10}$/.test(p)) return `+91${p}`;
+  // if starts with 0, strip leading zeros and prefix +91
+  if (/^0+\d+$/.test(p)) return `+91${p.replace(/^0+/, "")}`;
+  // default prefix +91 if no plus provided
+  return `+91${p}`;
+}
+
+// @route   POST /api/auth/register
+// @desc    Register a new user
+// @access  Public
+router.post(
+  "/register",
+  [
+    body("name")
+      .trim()
+      .isLength({ min: 2 })
+      .withMessage("Name must be at least 2 characters"),
+    body("email").isEmail().withMessage("Please enter a valid email"),
+    body("password")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters"),
+    body("phone")
+      .trim()
+      .isLength({ min: 10 })
+      .withMessage("Phone number must be at least 10 characters"),
+    body("emergencyContact")
+      .trim()
+      .isLength({ min: 10 })
+      .withMessage("Emergency contact must be at least 10 characters"),
+  ],
+  async (req, res) => {
+    try {
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          errors: errors.array(),
+        });
+      }
+
+      const {
+        name,
+        email,
+        password,
+        phone,
+        emergencyContact,
+        role = "tourist",
+      } = req.body;
+      const normalizedPhone = normalizePhone(phone);
+
+      // Try MongoDB first, fallback to memory store
+      let existingUser;
+      let savedUser;
+
+      try {
+        // Try MongoDB
+        existingUser = await User.findOne({ email });
+      } catch (mongoError) {
+        console.log("📊 MongoDB not available, using in-memory store for demo");
+        useMemoryStore = true;
+        existingUser = await memoryStore.findOne({ email });
+      }
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: "User already exists with this email",
+        });
+      }
+
+      // Generate digital ID
+      const timestamp = Date.now();
+      const random = Math.floor(Math.random() * 10000);
+      const digitalId = `TID${timestamp}${random}`;
+
+      if (useMemoryStore) {
+        // For in-memory store, we need to hash manually
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const userData = {
+          name,
+          email,
+          password: hashedPassword,
+          phone: normalizedPhone,
+          emergencyContact,
+          role,
+          digitalId,
+        };
+        savedUser = await memoryStore.save(userData);
+      } else {
+        // For MongoDB, let the model handle password hashing
+        const user = new User({
+          name,
+          email,
+          password, // Don't hash here - let the model do it
+          phone: normalizedPhone,
+          emergencyContact,
+          role,
+          digitalId,
+        });
+
+        savedUser = await user.save();
+      }
+
+      // Mint Tourist ID NFT on blockchain (minimal integration)
+      let blockchainData = null;
+      try {
+        // Use a dummy wallet address for now (in production, get from user wallet)
+        const dummyWalletAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"; // Replace with actual user wallet
+        const mintResult = await blockchainService.mintTouristID(
+          dummyWalletAddress,
+          savedUser.name,
+          savedUser.digitalId
+        );
+        if (mintResult.success) {
+          blockchainData = {
+            tokenId: mintResult.tokenId,
+            txHash: mintResult.txHash,
+            contractAddress: process.env.BLOCKCHAIN_CONTRACT_ADDRESS
+          };
+          // Update user with blockchain data
+          if (!useMemoryStore) {
+            await User.findByIdAndUpdate(savedUser._id, {
+              blockchainTokenId: mintResult.tokenId,
+              blockchainTxHash: mintResult.txHash
+            });
+          }
+        }
+      } catch (blockchainError) {
+        console.warn("Blockchain minting failed, continuing without:", blockchainError.message);
+      }
+
+      // Generate JWT token
+      const token = generateToken(savedUser.id || savedUser._id);
+
+      // Return user data (without password)
+      const responseUser = {
+        id: savedUser.id || savedUser._id,
+        name: savedUser.name,
+        email: savedUser.email,
+        phone: savedUser.phone,
+        emergencyContact: savedUser.emergencyContact,
+        role: savedUser.role,
+        digitalId: savedUser.digitalId,
+        blockchainData,
+        createdAt: savedUser.createdAt || new Date(),
+      };
+
+      res.status(201).json({
+        success: true,
+        message: useMemoryStore
+          ? "User registered successfully (using demo mode - no database)"
+          : "User registered successfully",
+        token,
+        user: responseUser,
+        demo: useMemoryStore,
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error during registration",
+      });
+    }
+  },
+);
+
+// @route   POST /api/auth/login
+
+// POST /api/auth/request-token - demo helper: return demo token by email or phone
+router.post("/request-token", async (req, res) => {
+  try {
+    const { email } = req.body;
+    let { phone } = req.body || {};
+    phone = normalizePhone(phone);
+    if (!email && !phone)
+      return res
+        .status(400)
+        .json({ success: false, message: "Provide email or phone" });
+
+    let user;
+    try {
+      user = await User.findOne(email ? { email } : { phone });
+    } catch (mongoErr) {
+      // fallback to memory store
+      user = await memoryStore.findOne(email ? { email } : { phone });
+    }
+
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+
+    // Only allow demo token issuance for users that have been enabled via SMS flow
+    if (!user.enabled) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "User has not enabled live-tracking yet. Ask admin to send an enable SMS.",
+      });
+    }
+
+    // If token expired or missing, generate a new one
+    const now = new Date();
+    if (
+      !user.demoToken ||
+      !user.tokenExpires ||
+      new Date(user.tokenExpires) < now
+    ) {
+      const demoToken = `demo-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+      const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
+      try {
+        if (user._id)
+          await User.findByIdAndUpdate(user._id, {
+            demoToken,
+            tokenExpires: expires,
+          });
+        else {
+          user.demoToken = demoToken;
+          user.tokenExpires = expires;
+        }
+        user.demoToken = demoToken;
+        user.tokenExpires = expires;
+      } catch (e) {}
+    }
+
+    res.json({
+      success: true,
+      demoToken: user.demoToken,
+      tokenExpires: user.tokenExpires,
+    });
+  } catch (e) {
+    console.error("request-token error", e);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// POST /api/auth/send-enable-sms
+// Admin action: send an SMS to the given phone (or email) containing a one-time enable link
+router.post("/send-enable-sms", async (req, res) => {
+  try {
+    let { phone, email } = req.body || {};
+    phone = normalizePhone(phone);
+    if (!phone && !email)
+      return res.status(400).json({
+        success: false,
+        message: "Provide phone or email to send SMS",
+      });
+
+    let user;
+    try {
+      user = await User.findOne(email ? { email } : { phone });
+    } catch (mongoErr) {
+      user = await memoryStore.findOne(email ? { email } : { phone });
+    }
+
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+
+    const enableToken = `enable-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+    const expires = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
+
+    // Persist enable token
+    try {
+      if (user._id) {
+        await User.findByIdAndUpdate(user._id, {
+          enableToken,
+          enableTokenExpires: expires,
+        });
+      } else {
+        // memory store
+        await memoryStore.updateById(user.id || user._id, {
+          enableToken,
+          enableTokenExpires: expires,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to persist enable token", e);
+    }
+
+    // Allow admin to provide a publicUrl override (useful for ngrok or public staging)
+    const publicUrl =
+      (req.body && req.body.publicUrl) || process.env.BACKEND_URL;
+    function isLocalHostOrPrivate(u) {
+      try {
+        const parsed = new URL(u);
+        const host = parsed.hostname;
+        return (
+          host === "localhost" ||
+          host === "127.0.0.1" ||
+          host.endsWith(".local")
+        );
+      } catch (e) {
+        return true; // treat invalid URLs as local/unsafe
+      }
+    }
+
+    const baseUrl = publicUrl || `${req.protocol}://${req.get("host")}`;
+    const enableLink = `${baseUrl}/api/auth/enable?token=${encodeURIComponent(enableToken)}&autostart=1`;
+
+    // Development override: allow localhost sends only when BOTH the env var and
+    // an explicit request flag are provided. This prevents accidental usage in prod.
+    const allowLocalOverride =
+      process.env.ALLOW_LOCAL_SMS === "true" &&
+      req.body?.allowLocalhost === true;
+
+    if (
+      isLocalHostOrPrivate(baseUrl) &&
+      !req.body?.publicUrl &&
+      !allowLocalOverride
+    ) {
+      console.warn("Refusing to send SMS for non-public baseUrl:", baseUrl);
+      return res.status(400).json({
+        success: false,
+        message:
+          'Refusing to send SMS: enable link resolves to localhost or non-public host. Provide a public BACKEND_URL or pass a publicUrl in the request (e.g. an ngrok URL) to send. For local dev only: set ALLOW_LOCAL_SMS=true and include { "allowLocalhost": true } in the request body.',
+      });
+    }
+
+    if (allowLocalOverride) {
+      console.warn(
+        "DEV OVERRIDE: sending SMS with localhost link because ALLOW_LOCAL_SMS=true and allowLocalhost flag provided. DO NOT USE IN PRODUCTION.",
+      );
+    }
+
+    // Try sending SMS via Twilio if configured
+    const twilioSid =
+      process.env.TWILIO_SID || process.env.SMS_TWILIO_ACCOUNTSID;
+    const twilioAuth =
+      process.env.TWILIO_AUTH || process.env.SMS_TWILIO_AUTHTOKEN;
+    const twilioFrom =
+      process.env.TWILIO_FROM ||
+      process.env.TWILIO_PHONE_NUMBER ||
+      process.env.SMS_TWILIO_FROM;
+    const twilioMessagingServiceSid =
+      process.env.SMS_TWILIO_MESSAGINGSERVICESID ||
+      process.env.TWILIO_MESSAGING_SERVICE_SID;
+    const smsProvider =
+      process.env.SMS_PROVIDER || process.env.SMS_PROVIDER_NAME;
+
+    if (
+      (smsProvider === "twilio" || twilioSid) &&
+      twilioSid &&
+      twilioAuth &&
+      phone
+    ) {
+      try {
+        const client = require("twilio")(twilioSid, twilioAuth);
+        const msgPayload = {
+          to: phone,
+          body: `SmartSafety: tap to start one‑button live‑tracking so admin can see your live location — ${enableLink}`,
+          statusCallback: `${baseUrl}/api/auth/sms-status-callback`,
+        };
+        if (twilioMessagingServiceSid) {
+          msgPayload.messagingServiceSid = twilioMessagingServiceSid;
+        } else if (twilioFrom) {
+          msgPayload.from = twilioFrom;
+        }
+
+        const twilioResp = await client.messages.create(msgPayload);
+        console.info("Twilio send", {
+          sid: twilioResp.sid,
+          to: twilioResp.to,
+          status: twilioResp.status,
+        });
+
+        // persist lastSms on user
+        try {
+          const smsRecord = {
+            sid: twilioResp.sid,
+            status: twilioResp.status,
+            to: phone,
+            updatedAt: new Date(),
+          };
+          if (user._id)
+            await User.findByIdAndUpdate(user._id, { lastSms: smsRecord });
+          else
+            await memoryStore.updateById(user.id || user._id, {
+              lastSms: smsRecord,
+            });
+        } catch (e) {
+          console.warn("Failed to persist lastSms", e);
+        }
+
+        return res.json({
+          success: true,
+          message: `SMS sent to ${phone}`,
+          providerResult: { sid: twilioResp.sid, status: twilioResp.status },
+        });
+      } catch (smsErr) {
+        console.error("Twilio send failed", smsErr);
+        return res.status(502).json({
+          success: false,
+          message: "Failed to send SMS (provider error)",
+          detail: smsErr && smsErr.message ? smsErr.message : undefined,
+        });
+      }
+    }
+
+    // Fallback: return the link in response (for demo/testing)
+    console.log("Enable link (dev):", enableLink);
+    res.json({
+      success: true,
+      message: "Enable link generated (dev)",
+      enableLink,
+    });
+  } catch (e) {
+    console.error("send-enable-sms error", e);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// GET /api/auth/enable?token=...
+// When the user clicks the SMS link, this marks them enabled and issues a demo token (or redirects to app deep link)
+router.get("/enable", async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).send("Missing token");
+
+    let user;
+    try {
+      user = await User.findOne({ enableToken: token });
+    } catch (mongoErr) {
+      user = await memoryStore.findOne({ enableToken: token });
+    }
+
+    if (!user) return res.status(400).send("Invalid or expired token");
+    if (
+      user.enableTokenExpires &&
+      new Date(user.enableTokenExpires) < new Date()
+    ) {
+      return res.status(400).send("Enable token expired");
+    }
+
+    // Mark enabled and create demo token if missing
+    const demoToken =
+      user.demoToken ||
+      `demo-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+    const tokenExpires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
+
+    try {
+      if (user._id) {
+        await User.findByIdAndUpdate(user._id, {
+          enabled: true,
+          demoToken,
+          tokenExpires,
+          enableToken: null,
+          enableTokenExpires: null,
+        });
+      } else {
+        await memoryStore.updateById(user.id || user._id, {
+          enabled: true,
+          demoToken,
+          tokenExpires,
+          enableToken: null,
+          enableTokenExpires: null,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to persist enable/ token update", e);
+    }
+
+    const deepLinkBase = process.env.MOBILE_DEEP_LINK || "touristsafety://auth";
+    const deepLink = `${deepLinkBase}?token=${demoToken}`;
+
+    // If the request expects JSON, return the token and deep link
+    if (req.get("Accept") && req.get("Accept").includes("application/json")) {
+      return res.json({ success: true, demoToken, deepLink });
+    }
+
+    // Otherwise serve a small HTML page which will prompt the user to share
+    // their location and will POST updates to the backend using the demoToken.
+    const page = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Share Location</title>
+    <style>body{font-family:Arial,Helvetica,sans-serif;padding:16px}</style>
+  </head>
+  <body>
+    <h2>Live Location Sharing</h2>
+    <p>This page will share your live location with the admin for safety purposes.</p>
+    <p>
+      <button id="start">Start Sharing Location</button>
+      <button id="stop" disabled>Stop</button>
+    </p>
+    <p id="status">Status: idle</p>
+    <p>If you have the app, <a href="${deepLink}">open the app</a>.</p>
+    <script>
+      (function(){
+        const demoToken = ${JSON.stringify(demoToken)};
+        let watchId = null;
+        const statusEl = document.getElementById('status');
+        const startBtn = document.getElementById('start');
+        const stopBtn = document.getElementById('stop');
+
+        function setStatus(s){ statusEl.textContent = 'Status: ' + s; }
+
+        async function sendLocation(pos){
+          try{
+            const body = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              timestamp: new Date(pos.timestamp).toISOString(),
+              demoToken: demoToken
+            };
+            await fetch('/api/auth/report-location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+            setStatus('Location sent: ' + body.latitude.toFixed(6) + ', ' + body.longitude.toFixed(6));
+          }catch(e){
+            console.error('sendLocation error',e);
+            setStatus('Failed to send location');
+          }
+        }
+
+        startBtn.addEventListener('click', function(){
+          if(!navigator.geolocation){ setStatus('Geolocation not supported'); return; }
+          setStatus('Requesting permission...');
+          watchId = navigator.geolocation.watchPosition(function(pos){
+            sendLocation(pos);
+          }, function(err){
+            console.error(err);
+            setStatus('Geolocation error: ' + err.message);
+          }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
+          startBtn.disabled = true; stopBtn.disabled = false; setStatus('Sharing...');
+        });
+
+        stopBtn.addEventListener('click', function(){
+          if(watchId!=null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
+          startBtn.disabled = false; stopBtn.disabled = true; setStatus('Stopped');
+        });
+
+        // Auto-start when opened from SMS link: ?autostart=1
+        try {
+          const params = new URLSearchParams(window.location.search || '');
+          if (params.get('autostart') === '1') {
+            // trigger the same start logic (this will show the browser permission prompt)
+            startBtn.click();
+          }
+        } catch (e) {
+          console.warn('autostart parse failed', e);
+        }
+
+      })();
+    </script>
+  </body>
+</html>`;
+
+    return res.send(page);
+  } catch (e) {
+    console.error("enable route error", e);
+    res.status(500).send("Server error");
+  }
+});
+
+// POST /api/auth/report-location
+// Accepts location reports from the one-time enable flow. Supports body { demoToken, latitude, longitude, accuracy, timestamp }
+router.post("/report-location", async (req, res) => {
+  try {
+    const { demoToken, latitude, longitude, accuracy, timestamp } =
+      req.body || {};
+    if (
+      !demoToken ||
+      typeof latitude !== "number" ||
+      typeof longitude !== "number"
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing demoToken or coordinates" });
+    }
+
+    let user;
+    try {
+      user = await User.findOne({ demoToken });
+    } catch (mongoErr) {
+      user = await memoryStore.findOne({ demoToken });
+    }
+
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+
+    const loc = {
+      latitude: latitude,
+      longitude: longitude,
+      accuracy: accuracy || null,
+      timestamp: timestamp ? new Date(timestamp) : new Date(),
+    };
+
+    try {
+      if (user._id) {
+        await User.findByIdAndUpdate(user._id, {
+          lastLocation: loc,
+          updatedAt: new Date(),
+        });
+      } else {
+        await memoryStore.updateById(user.id || user._id, {
+          lastLocation: loc,
+          updatedAt: new Date(),
+        });
+      }
+    } catch (e) {
+      console.error("Failed to persist location", e);
+    }
+
+    // Broadcast to connected admin dashboards so the map updates in near real-time
+    try {
+      const socketHandler = req.app?.locals?.socketHandler;
+      if (
+        socketHandler &&
+        typeof socketHandler.broadcastToAdmins === "function"
+      ) {
+        const payload = {
+          userId: user._id || user.id,
+          digitalId:
+            user.digitalId ||
+            user.digital_id ||
+            user.email ||
+            String(user._id || user.id),
+          location: { latitude: loc.latitude, longitude: loc.longitude },
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          accuracy: loc.accuracy || null,
+          timestamp: loc.timestamp || new Date(),
+        };
+        socketHandler.broadcastToAdmins("location_update", payload);
+      }
+    } catch (e) {
+      console.warn("Failed to broadcast location update to admins", e);
+    }
+
+    return res.json({ success: true, message: "Location received" });
+  } catch (e) {
+    console.error("report-location error", e);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Twilio status callback
+// Twilio will POST message events (MessageSid, MessageStatus, ErrorCode, ErrorMessage)
+router.post("/sms-status-callback", async (req, res) => {
+  try {
+    const sid = req.body.MessageSid || req.body.SmsSid || req.body.MessageSid;
+    const status = req.body.MessageStatus || req.body.MessageStatus;
+    const errorCode = req.body.ErrorCode ? Number(req.body.ErrorCode) : null;
+    const errorMessage = req.body.ErrorMessage || null;
+
+    if (!sid) return res.status(400).send("missing MessageSid");
+
+    // find user by lastSms.sid
+    let user;
+    try {
+      user = await User.findOne({ "lastSms.sid": sid });
+    } catch (e) {
+      user = await memoryStore.findOne({ "lastSms.sid": sid });
+    }
+
+    if (!user) {
+      // not fatal; return OK so Twilio won't retry repeatedly
+      console.warn("sms-status-callback: no user found for sid", sid);
+      return res.status(200).send("ok");
+    }
+
+    const update = {
+      "lastSms.status": status,
+      "lastSms.errorCode": errorCode,
+      "lastSms.errorMessage": errorMessage,
+      "lastSms.updatedAt": new Date(),
+    };
+    try {
+      if (user._id) await User.findByIdAndUpdate(user._id, update);
+      else await memoryStore.updateById(user.id || user._id, update);
+    } catch (e) {
+      console.warn("sms-status-callback: failed to persist status", e);
+    }
+
+    // broadcast to admins via socket if available
+    try {
+      const socketHandler = req.app?.locals?.socketHandler;
+      if (
+        socketHandler &&
+        typeof socketHandler.broadcastToAdmins === "function"
+      ) {
+        socketHandler.broadcastToAdmins("sms_status", {
+          userId: user._id || user.id,
+          sid,
+          status,
+          errorCode,
+          errorMessage,
+        });
+      }
+    } catch (e) {
+      console.warn("sms-status-callback: broadcast failed", e);
+    }
+
+    return res.status(200).send("ok");
+  } catch (e) {
+    console.error("sms-status-callback error", e);
+    return res.status(500).send("error");
+  }
+});
+
+// @desc    Login user
+// @access  Public
+router.post(
+  "/login",
+  [
+    body("email").isEmail().withMessage("Please provide a valid email"),
+    body("password").exists().withMessage("Password is required"),
+  ],
+  async (req, res) => {
+    try {
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          errors: errors.array(),
+        });
+      }
+
+      const { email, password } = req.body;
+      console.log("Login attempt:", { email, passwordLength: password.length });
+
+      // Try to find user (MongoDB or memory store)
+      let user;
+      try {
+        user = await User.findOne({ email });
+      } catch (mongoError) {
+        console.log("📊 Using in-memory store for login");
+        useMemoryStore = true;
+        user = await memoryStore.findOne({ email });
+      }
+
+      if (!user) {
+        console.log("User not found:", email);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      console.log("User found:", {
+        id: user.id || user._id,
+        email: user.email,
+      });
+
+      // Check password
+      let isPasswordValid;
+      if (useMemoryStore) {
+        // For in-memory store, compare with bcrypt
+        console.log("Comparing password with bcrypt (memory store)");
+        isPasswordValid = await bcrypt.compare(password, user.password);
+      } else {
+        // For MongoDB, use the model method
+        console.log("Comparing password with model method (MongoDB)");
+        isPasswordValid = await user.comparePassword(password);
+      }
+
+      console.log("Password valid:", isPasswordValid);
+
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      // Generate JWT token
+      const token = generateToken(user.id || user._id);
+
+      // Return user data (without password)
+      const userData = {
+        id: user.id || user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        emergencyContact: user.emergencyContact,
+        role: user.role,
+        digitalId: user.digitalId,
+        createdAt: user.createdAt || user.createdAt || new Date(),
+      };
+
+      res.json({
+        success: true,
+        message: "Login successful",
+        token,
+        user: userData,
+        demo: useMemoryStore,
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error during login",
+      });
+    }
+  },
+);
+
+// @route   GET /api/auth/me
+// @desc    Get current user
+// @access  Private
+router.get("/me", async (req, res) => {
+  try {
+    // Get token from header
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "No token provided",
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("-password");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Token is not valid",
+      });
+    }
+
+    res.json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error("Auth verification error:", error);
+    res.status(401).json({
+      success: false,
+      message: "Token is not valid",
+    });
+  }
+});
+
+// @route   GET /api/auth/users
+// @desc    Get all users (for testing/demo purposes)
+// @access  Public (in production, make this admin-only)
+router.get("/users", async (req, res) => {
+  try {
+    let users;
+
+    if (useMemoryStore) {
+      users = memoryStore.getAllUsers();
+    } else {
+      users = await User.find({}).select("-password");
+    }
+
+    res.json({
+      success: true,
+      count: users.length,
+      users: users.map((user) => ({
+        id: user.id || user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        digitalId: user.digitalId,
+        createdAt: user.createdAt,
+        lastSms: user.lastSms || null,
+      })),
+      demo: useMemoryStore,
+    });
+  } catch (error) {
+    console.error("Get users error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching users",
+    });
+  }
+});
+
+// @route   DELETE /api/auth/users/:id
+// @desc    Delete a user by id (supports demo in-memory store)
+// @access  Public (for demo) - in production should be admin-only
+router.delete("/users/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    let deleted;
+    try {
+      deleted = await User.findByIdAndDelete(id);
+    } catch (mongoError) {
+      console.log("📊 MongoDB not available, using in-memory store for delete");
+      useMemoryStore = true;
+      deleted = await memoryStore.deleteById(id);
+    }
+
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.json({ success: true, message: "User deleted" });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error deleting user" });
+  }
+});
+// @route   GET /api/auth/guides
+// @desc    Get all available guides (admins)
+// @access  Private
+router.get("/guides", auth, async (req, res) => {
+  try {
+    let guides;
+
+    if (useMemoryStore) {
+      guides = memoryStore
+        .getAllUsers()
+        .filter((user) => user.role && user.role.toLowerCase() === "admin");
+    } else {
+      guides = await User.find({
+        role: "admin",
+      }).select("-password");
+    }
+
+    res.json({
+      success: true,
+      count: guides.length,
+      guides: guides.map((guide) => ({
+        id: guide.id || guide._id,
+        _id: guide._id,
+        name: guide.name,
+        email: guide.email,
+        phone: guide.phone,
+        role: guide.role,
+        digitalId: guide.digitalId,
+        createdAt: guide.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Get guides error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching guides",
+    });
+  }
+});
+
+// @route   POST /api/auth/assign-guide
+// @desc    Assign a guide to a tourist
+// @access  Private
+router.post("/assign-guide", auth, async (req, res) => {
+  try {
+    const { guideId } = req.body;
+    const touristId = req.user.id || req.user._id;
+
+    if (!guideId) {
+      return res.status(400).json({
+        success: false,
+        message: "Guide ID is required",
+      });
+    }
+
+    // Verify the guide exists and is not a tourist
+    let guide;
+    if (useMemoryStore) {
+      guide = memoryStore.findById(guideId);
+    } else {
+      guide = await User.findById(guideId);
+    }
+
+    if (!guide || guide.role === "tourist") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid guide selected",
+      });
+    }
+
+    // Update the tourist's assigned guide
+    if (useMemoryStore) {
+      const updated = await memoryStore.updateById(touristId, {
+        assignedGuide: guideId,
+      });
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Tourist not found",
+        });
+      }
+    } else {
+      const updated = await User.findByIdAndUpdate(
+        touristId,
+        { assignedGuide: guideId },
+        { new: true },
+      );
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Tourist not found",
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Guide assigned successfully",
+      guide: {
+        id: guide.id || guide._id,
+        name: guide.name,
+        email: guide.email,
+        role: guide.role,
+      },
+    });
+
+    // Notify the assigned admin about the new tourist
+    const socketHandler = req.app?.locals?.socketHandler;
+    if (socketHandler && typeof socketHandler.sendToUser === "function") {
+      // Get tourist details for notification
+      let tourist;
+      if (useMemoryStore) {
+        tourist = memoryStore.findById(touristId);
+      } else {
+        tourist = await User.findById(touristId);
+      }
+
+      if (tourist) {
+        socketHandler.sendToUser(guideId, "tourist_assigned", {
+          tourist: {
+            id: tourist.id || tourist._id,
+            name: tourist.name,
+            email: tourist.email,
+            phone: tourist.phone,
+            digitalId: tourist.digitalId,
+            assignedAt: new Date(),
+          },
+          message: `New tourist ${tourist.name} has been assigned to you`,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Assign guide error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error assigning guide",
+    });
+  }
+});
+
+// @route   GET /api/auth/my-tourists
+// @desc    Get tourists assigned to the logged-in guide
+// @access  Private
+router.get("/my-tourists", auth, async (req, res) => {
+  try {
+    const guideId = req.user.id || req.user._id;
+    let tourists;
+
+    if (useMemoryStore) {
+      tourists = memoryStore
+        .getAllUsers()
+        .filter(
+          (user) => user.assignedGuide === guideId && user.role === "tourist",
+        );
+    } else {
+      tourists = await User.find({
+        assignedGuide: guideId,
+        role: "tourist",
+      }).select("-password");
+    }
+
+    res.json({
+      success: true,
+      count: tourists.length,
+      tourists: tourists.map((tourist) => ({
+        id: tourist.id || tourist._id,
+        name: tourist.name,
+        email: tourist.email,
+        phone: tourist.phone,
+        role: tourist.role,
+        digitalId: tourist.digitalId,
+        lastLocation: tourist.lastLocation,
+        lastLocationUpdateTime: tourist.lastLocationUpdateTime,
+        createdAt: tourist.createdAt,
+        assignedGuide: tourist.assignedGuide,
+      })),
+    });
+  } catch (error) {
+    console.error("Get my tourists error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching tourists",
+    });
+  }
+});
+module.exports = router;
+
+// Convenience route: POST /api/create-user
+// Allows admin tools to quickly create a user without going through full /register validations
+router.post("/create-user", async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      phone,
+      emergencyContact,
+      role = "tourist",
+    } = req.body;
+    const normalizedPhone = normalizePhone(phone);
+
+    // Basic validation
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "name, email and password are required",
+      });
+    }
+
+    // Try MongoDB first, fallback to memory store
+    let created;
+    try {
+      const user = new User({
+        name,
+        email,
+        password,
+        phone: normalizedPhone,
+        emergencyContact,
+        role,
+      });
+      created = await user.save();
+    } catch (mongoErr) {
+      console.log("MongoDB create-user failed, trying memory store");
+      try {
+        created = await memoryStore.save({
+          name,
+          email,
+          password,
+          phone: normalizedPhone,
+          emergencyContact,
+          role,
+        });
+      } catch (memErr) {
+        console.error("Memory store create failed", memErr);
+      }
+    }
+
+    if (!created) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Failed to create user" });
+    }
+
+    res.status(201).json({
+      success: true,
+      user: {
+        id: created.id || created._id,
+        name: created.name,
+        email: created.email,
+        role: created.role,
+        phone: created.phone,
+        digitalId: created.digitalId,
+        createdAt: created.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("create-user error", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error creating user" });
+  }
+});
+
+ 
+ / /   @ r o u t e       P O S T   / a p i / a u t h / v e r i f y - t o u r i s t - i d 
+ / /   @ d e s c         V e r i f y   T o u r i s t   I D   o n   b l o c k c h a i n 
+ / /   @ a c c e s s     P u b l i c 
+ r o u t e r . p o s t ( " / v e r i f y - t o u r i s t - i d " ,   a s y n c   ( r e q ,   r e s )   = >   { 
+     t r y   { 
+         c o n s t   {   t o k e n I d   }   =   r e q . b o d y ; 
+ 
+         i f   ( ! t o k e n I d )   { 
+             r e t u r n   r e s . s t a t u s ( 4 0 0 ) . j s o n ( { 
+                 s u c c e s s :   f a l s e , 
+                 m e s s a g e :   " T o k e n   I D   i s   r e q u i r e d " 
+             } ) ; 
+         } 
+ 
+         c o n s t   v e r i f i c a t i o n   =   a w a i t   b l o c k c h a i n S e r v i c e . v e r i f y T o u r i s t I D ( t o k e n I d ) ; 
+ 
+         i f   ( v e r i f i c a t i o n . s u c c e s s )   { 
+             r e s . j s o n ( { 
+                 s u c c e s s :   t r u e , 
+                 v e r i f i e d :   v e r i f i c a t i o n . i s V a l i d , 
+                 d a t a :   { 
+                     o w n e r :   v e r i f i c a t i o n . o w n e r , 
+                     n a m e :   v e r i f i c a t i o n . n a m e , 
+                     d i g i t a l I d :   v e r i f i c a t i o n . d i g i t a l I d 
+                 } 
+             } ) ; 
+         }   e l s e   { 
+             r e s . s t a t u s ( 4 0 0 ) . j s o n ( { 
+                 s u c c e s s :   f a l s e , 
+                 m e s s a g e :   v e r i f i c a t i o n . e r r o r   | |   " V e r i f i c a t i o n   f a i l e d " 
+             } ) ; 
+         } 
+     }   c a t c h   ( e r r o r )   { 
+         c o n s o l e . e r r o r ( " T o u r i s t   I D   v e r i f i c a t i o n   e r r o r : " ,   e r r o r ) ; 
+         r e s . s t a t u s ( 5 0 0 ) . j s o n ( { 
+             s u c c e s s :   f a l s e , 
+             m e s s a g e :   " S e r v e r   e r r o r   d u r i n g   v e r i f i c a t i o n " 
+         } ) ; 
+     } 
+ } ) ; 
+ 
+ m o d u l e . e x p o r t s   =   r o u t e r ;  
+ 
