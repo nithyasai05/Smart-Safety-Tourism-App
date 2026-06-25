@@ -1,9 +1,7 @@
-Based on your MCA project **AI-Based Tourist Safety Monitoring System (Smart Safety Tourism App)**, here's a professional GitHub README that fits your project scope involving AI, Blockchain, Geo-Fencing, Digital Tourist ID, and Emergency Response.
 
-# README.md
 
 ````markdown
-# AI-Based Tourist Safety Monitoring System
+AI-Based Tourist Safety Monitoring System
 
 An intelligent tourist safety platform designed to enhance traveler security through real-time monitoring, AI-powered incident detection, geo-fencing, emergency response services, and secure digital identity management.
 
